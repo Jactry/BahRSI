@@ -108,6 +108,7 @@ void Widget::microPauseRest()
     }
     else{
         this->microPauseWorkTimer->stop();
+        ui->pushButton->setVisible(false);
         QTime n(0,0,13);
         ui->progressBar->setRange(0,130);
         ui->progressBar->setValue(1);
