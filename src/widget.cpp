@@ -1,6 +1,5 @@
 #include "widget.h"
 #include "ui_widget.h"
-#include "iostream"
 
 Widget::Widget(QWidget *parent) :
     QWidget(parent),
@@ -29,9 +28,7 @@ Widget::Widget(QWidget *parent) :
     QString stylesheet = filetext.readAll();
 
     this->setAttribute(Qt::WA_TranslucentBackground, true);
-    this->setWindowFlags(Qt::Window | Qt::FramelessWindowHint
-                       | Qt::WindowSystemMenuHint | Qt::WindowMinimizeButtonHint
-                       | Qt::WindowMaximizeButtonHint | Qt::WindowStaysOnTopHint);
+    this->setWindowFlags(Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
     this->setWindowOpacity(0.8); //半透明
     //this->setStyleSheet(stylesheet); //载入StyleSheet
 
@@ -41,7 +38,7 @@ Widget::Widget(QWidget *parent) :
     aboutAction = new QAction(tr("About BahRSI"), this);
     quitAction = new QAction(tr("Quit BahRSI"), this);
     connect(this->aboutAction, SIGNAL(triggered()), this, SLOT(aboutBahRSI()));
-    connect(this->quitAction, SIGNAL(triggered()), this, SLOT(close()));
+    connect(this->quitAction, SIGNAL(triggered()), this, SLOT(quitBahRSI()));
     menu = new QMenu;
     menu->addAction(this->aboutAction);
     menu->addSeparator();
@@ -75,6 +72,7 @@ Widget::Widget(QWidget *parent) :
 
     workBreakRestTimer = new QTimer(this);
     connect(this->workBreakRestTimer, SIGNAL(timeout()), this, SLOT(workBreakWork()));
+
 }
 
 Widget::~Widget()
@@ -93,6 +91,7 @@ void Widget::paintEvent(QPaintEvent *)
 void Widget::stepOne()
 {
     ui->progressBar->setValue(ui->progressBar->value() + 1);
+    this->isMouseMoving(); // 借用此计时器更新状态
 }
 
 void Widget::updateUI()
@@ -155,16 +154,22 @@ void Widget::workBreakWork()
     this->workBreakWorkTimer->start(1000*60*50);
 }
 
-void Widget::mouseMoveEvent(QMouseEvent *)
+void Widget::isMouseMoving()
 {
-    if(this->microPauseRestTimer->isActive()){
-        this->microPauseRest();
-    }
-    else{
-        if(workBreakRestTimer->isActive()){
-            this->workBreakRest();
+    //判断鼠标是否移动
+    wcursor = new QCursor();
+    if (this->mousePosX != wcursor->pos().x() | this->mousePosY != wcursor->pos().y()) {
+        if (this->microPauseRestTimer->isActive()) {
+            this->microPauseRest();
+        }
+     else{
+            if (this->workBreakRestTimer->isActive()) {
+                this->workBreakRest();
+            }
         }
     }
+    this->mousePosX = this->wcursor->pos().x();
+    this->mousePosY = this->wcursor->pos().y();
 }
 
 void Widget::keyPressEvent(QKeyEvent *)
@@ -184,4 +189,9 @@ void Widget::aboutBahRSI()
 void Widget::postPone()
 {
     this->workBreakWork();
+}
+
+void Widget::quitBahRSI()
+{
+    qApp->quit();
 }
