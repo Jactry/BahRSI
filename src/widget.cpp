@@ -1,11 +1,16 @@
 #include "widget.h"
 #include "ui_widget.h"
+#include <QSettings>
+
+int workBreakWorkTime, workBreakRestTime, microPauseWorkTime, microPauseRestTime;
 
 Widget::Widget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::Widget)
 {
     ui->setupUi(this);
+
+    this->readSettings();
 
     //设置标签字体颜色、居中
     QPalette paletteWhite;
@@ -30,7 +35,7 @@ Widget::Widget(QWidget *parent) :
     this->setAttribute(Qt::WA_TranslucentBackground, true);
     this->setWindowFlags(Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
     this->setWindowOpacity(0.8); //半透明
-    //this->setStyleSheet(stylesheet); //载入StyleSheet
+    this->setStyleSheet(stylesheet); //载入StyleSheet
 
     //状态栏设置
     tary = new QSystemTrayIcon(this);
@@ -60,7 +65,7 @@ Widget::Widget(QWidget *parent) :
 
     microPauseWorkTimer = new QTimer(this);
     connect(this->microPauseWorkTimer, SIGNAL(timeout()), this, SLOT(microPauseRest()));
-    this->microPauseWorkTimer->start(1000*60*4);
+    this->microPauseWorkTimer->start(microPauseWorkTime*1000);
 
     microPauseRestTimer = new QTimer(this);
     connect(this->microPauseRestTimer, SIGNAL(timeout()), this, SLOT(microPauseWork()));
@@ -68,7 +73,7 @@ Widget::Widget(QWidget *parent) :
 
     workBreakWorkTimer = new QTimer(this);
     connect(this->workBreakWorkTimer, SIGNAL(timeout()), this, SLOT(workBreakRest()));
-    this->workBreakWorkTimer->start(1000*60*50);
+    this->workBreakWorkTimer->start(workBreakWorkTime*1000*60);
 
     workBreakRestTimer = new QTimer(this);
     connect(this->workBreakRestTimer, SIGNAL(timeout()), this, SLOT(workBreakWork()));
@@ -88,6 +93,24 @@ void Widget::paintEvent(QPaintEvent *)
     p.drawRoundedRect(0, 0, width() - 1, height() - 1, 20, 20);
 }
 
+void Widget::readSettings()
+{
+    QSettings settings("Jactry", "BahRSI");
+    microPauseWorkTime = settings.value("microWorkTime", int(4*60)).toInt();
+    microPauseRestTime = settings.value("microRestTime", int(13)).toInt();
+    workBreakWorkTime = settings.value("workTime", int(55)).toInt();
+    workBreakRestTime = settings.value("restTime", int(7)).toInt();
+}
+
+void Widget::writeSettings()
+{
+    QSettings settings("Jactry", "BasRSI");
+    settings.setValue("microWorkTime", microPauseWorkTime);
+    settings.setValue("microRestTime", microPauseRestTime);
+    settings.setValue("workTime", workBreakWorkTime);
+    settings.setValue("restTime", workBreakRestTime);
+}
+
 void Widget::stepOne()
 {
     ui->progressBar->setValue(ui->progressBar->value() + 1);
@@ -103,13 +126,13 @@ void Widget::updateUI()
 void Widget::microPauseRest()
 {
     if (workBreakRestTimer->isActive()){
-        this->microPauseWorkTimer->start(1000*60*4);
+        this->microPauseWorkTimer->start(microPauseWorkTime*1000);
     }
     else{
         this->microPauseWorkTimer->stop();
         ui->pushButton->setVisible(false);
-        QTime n(0,0,13);
-        ui->progressBar->setRange(0,130);
+        QTime n(0,0,microPauseRestTime);
+        ui->progressBar->setRange(0,microPauseRestTime*10);
         ui->progressBar->setValue(1);
         ui->timeLabel->setText(n.toString("hh:mm:ss"));
         ui->modelLabel->setText(tr("Micro Pause"));
@@ -117,7 +140,7 @@ void Widget::microPauseRest()
         this->show();
         this->secondTimer->start(1000);
         this->misecondTimer->start(100);
-        this->microPauseRestTimer->start(1000*13);
+        this->microPauseRestTimer->start(microPauseRestTime*1000);
     }
 }
 void Widget::microPauseWork()
@@ -126,7 +149,7 @@ void Widget::microPauseWork()
     this->secondTimer->stop();
     this->misecondTimer->stop();
     this->hide();
-    this->microPauseWorkTimer->start(1000*60*4);
+    this->microPauseWorkTimer->start(microPauseWorkTime*1000);
 }
 
 void Widget::workBreakRest()
@@ -142,7 +165,7 @@ void Widget::workBreakRest()
     this->show();
     this->secondTimer->start(1000);
     this->misecondTimer->start(100);
-    this->workBreakRestTimer->start(1000*60*8);
+    this->workBreakRestTimer->start(workBreakRestTime*1000*60);
 }
 
 void Widget::workBreakWork()
@@ -151,14 +174,14 @@ void Widget::workBreakWork()
     this->secondTimer->stop();
     this->misecondTimer->stop();
     this->hide();
-    this->workBreakWorkTimer->start(1000*60*50);
+    this->workBreakWorkTimer->start(workBreakWorkTime*1000*60);
 }
 
 void Widget::isMouseMoving()
 {
     //判断鼠标是否移动
     wcursor = new QCursor();
-    if (this->mousePosX != wcursor->pos().x() | this->mousePosY != wcursor->pos().y()) {
+    if ((this->mousePosX != wcursor->pos().x()) | (this->mousePosY != wcursor->pos().y())) {
         if (this->microPauseRestTimer->isActive()) {
             this->microPauseRest();
         }
@@ -193,5 +216,6 @@ void Widget::postPone()
 
 void Widget::quitBahRSI()
 {
+    this->writeSettings();
     qApp->quit();
 }

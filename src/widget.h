@@ -6,8 +6,6 @@
 #include <QtGui>
 #include <QTimer>
 #include <QPaintEvent>
-#include <QMouseEvent>
-#include <QClipboard>
 
 namespace Ui {
 class Widget;
@@ -40,6 +38,8 @@ private:
     int mousePosX;
     int mousePosY;
     QCursor *wcursor;
+    int workBreakWorkTime, workBreakRestTime; // WorkBreak 模式下的工作、休息时间 单位分钟
+    int microPauseWorkTime, microPauseRestTime; // MicroPause 模式下的工作、休息时间 单位秒
 
 private slots:
     void updateUI();
@@ -52,6 +52,8 @@ private slots:
     void quitBahRSI();
     void postPone();
     void isMouseMoving(); // 判断鼠标是否移动
+    void readSettings();
+    void writeSettings();
 };
 
 #endif // WIDGET_H
